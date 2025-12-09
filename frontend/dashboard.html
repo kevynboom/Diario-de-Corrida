@@ -20,20 +20,38 @@
 
         <h1>Minhas Corridas</h1>
 
+        <section class="stats-container">
+            <div class="card-stat">
+                <h3>Total Corridas</h3>
+                <p id="stat-total-corridas">0</p>
+            </div>
+            <div class="card-stat">
+                <h3>Distância Total</h3>
+                <p><span id="stat-total-distancia">0.00</span> km</p>
+            </div>
+            <div class="card-stat">
+                <h3>Pace Médio Geral</h3>
+                <p id="stat-pace-medio">0:00 min/km</p>
+            </div>
+        </section>
+
         <form id="form-corrida">
             <h2>Registar Nova Corrida</h2>
             <div class="form-grid">
                 <div class="form-group">
                     <label for="data">Data</label>
                     <input type="datetime-local" id="data" required>
+                    <span class="msg-erro" id="erro-data"></span>
                 </div>
                 <div class="form-group">
                     <label for="distancia">Distância (km)</label>
                     <input type="number" id="distancia" step="0.01" min="0.01" placeholder="Ex: 5.5" required>
+                    <span class="msg-erro" id="erro-distancia"></span>
                 </div>
                 <div class="form-group">
                     <label for="tempo">Tempo (minutos)</label>
                     <input type="number" id="tempo" step="1" min="1" placeholder="Ex: 30" required>
+                    <span class="msg-erro" id="erro-tempo"></span>
                 </div>
                 <div class="form-group form-group-full">
                     <label for="local">Local</label>
@@ -65,8 +83,16 @@
 
             <div id="loading">A carregar histórico...</div>
             <div id="error-message"></div>
+            
             <ul id="lista-corridas">
-            </ul>
+                </ul>
+
+            <div class="pagination-controls" id="paginacao" style="display:none;">
+                <button id="btn-ant" class="btn-paginacao">Anterior</button>
+                <span id="info-pagina">Pág 1</span>
+                <button id="btn-prox" class="btn-paginacao">Próximo</button>
+            </div>
+
         </section>
 
     </main>

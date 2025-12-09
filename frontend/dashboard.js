@@ -4,27 +4,46 @@ const API_CORRIDAS_URL = 'http://localhost:5184/api/Corridas';
 let editMode = false;
 let editId = null;
 
-// Variáveis para controle de listagem e filtro
-let todasAsCorridas = [];
-let ordemDecrescente = true; // Padrão: Mais recente/maior primeiro
+// Controle de Listagem e Paginação
+let todasAsCorridas = []; // Array completo original
+let listaFiltrada = [];   // Array ordenado/filtrado
+let ordemDecrescente = true;
+
+// Paginação
+let paginaAtual = 1;
+const itensPorPagina = 10;
 
 // --- Elementos do DOM ---
 const form = document.getElementById('form-corrida');
 const listaCorridas = document.getElementById('lista-corridas');
 const loadingDiv = document.getElementById('loading');
 const errorMessageDiv = document.getElementById('error-message');
+
+// Inputs
 const inputData = document.getElementById('data');
 const inputDistancia = document.getElementById('distancia');
 const inputTempo = document.getElementById('tempo');
 const inputLocal = document.getElementById('local');
+
+// Botões Form
 const btnSalvar = document.getElementById('btn-salvar');
 const btnCancelar = document.getElementById('btn-cancelar');
 
-// Elementos de Filtro
+// Filtro e Paginação
 const filtroSelect = document.getElementById('filtroSelect');
 const btnOrdem = document.getElementById('btnOrdem');
+const divPaginacao = document.getElementById('paginacao');
+const btnAnt = document.getElementById('btn-ant');
+const btnProx = document.getElementById('btn-prox');
+const infoPagina = document.getElementById('info-pagina');
+
+// Stats
+const statTotalCorridas = document.getElementById('stat-total-corridas');
+const statTotalDistancia = document.getElementById('stat-total-distancia');
+const statPaceMedio = document.getElementById('stat-pace-medio');
 
 // --- Funções Auxiliares ---
+
 function showError(message) {
     errorMessageDiv.textContent = `Erro: ${message}.`;
     errorMessageDiv.style.display = 'block';
@@ -45,7 +64,7 @@ function formatarData(dataString) {
 }
 
 function calcularPace(distancia, tempo) {
-    if (distancia <= 0 || tempo <= 0) return "N/A";
+    if (distancia <= 0 || tempo <= 0) return "0:00 min/km";
     const paceDecimal = tempo / distancia;
     const paceMinutos = Math.floor(paceDecimal);
     const paceSegundos = Math.round((paceDecimal - paceMinutos) * 60);
@@ -57,22 +76,91 @@ function resetFormToCreateMode() {
     form.reset();
     editMode = false;
     editId = null;
+    
+    // Limpar validações visuais
+    [inputData, inputDistancia, inputTempo].forEach(input => {
+        input.classList.remove('invalido');
+        document.getElementById(`erro-${input.id}`).textContent = '';
+    });
+    btnSalvar.disabled = false;
+
     btnSalvar.textContent = 'Guardar Corrida';
     btnSalvar.style.backgroundColor = 'var(--cor-destaque)';
     btnCancelar.style.display = 'none';
 }
 
-// --- Lógica de Ordenação e Renderização ---
+// --- 1. Lógica do Dashboard (Estatísticas) ---
+function atualizarDashboard(corridas) {
+    const totalCorridas = corridas.length;
+    
+    const totalDistancia = corridas.reduce((acc, curr) => acc + curr.distanciaKm, 0);
+    const totalTempo = corridas.reduce((acc, curr) => acc + curr.tempoMinutos, 0);
+
+    statTotalCorridas.textContent = totalCorridas;
+    statTotalDistancia.textContent = totalDistancia.toFixed(2);
+    
+    // Pace Médio Geral = Tempo Total / Distância Total
+    statPaceMedio.textContent = calcularPace(totalDistancia, totalTempo);
+}
+
+// --- 2. Lógica de Validação Visual ---
+function setupValidacao() {
+    const validarInputs = () => {
+        let formValido = true;
+
+        // Data não pode ser futura
+        const dataSelecionada = new Date(inputData.value);
+        const agora = new Date();
+        const erroData = document.getElementById('erro-data');
+        if (inputData.value && dataSelecionada > agora) {
+            inputData.classList.add('invalido');
+            erroData.textContent = 'Data não pode ser no futuro.';
+            formValido = false;
+        } else {
+            inputData.classList.remove('invalido');
+            erroData.textContent = '';
+        }
+
+        // Distância deve ser positiva
+        const erroDist = document.getElementById('erro-distancia');
+        if (inputDistancia.value && parseFloat(inputDistancia.value) <= 0) {
+            inputDistancia.classList.add('invalido');
+            erroDist.textContent = 'Distância deve ser maior que 0.';
+            formValido = false;
+        } else {
+            inputDistancia.classList.remove('invalido');
+            erroDist.textContent = '';
+        }
+
+        // Tempo deve ser positivo
+        const erroTempo = document.getElementById('erro-tempo');
+        if (inputTempo.value && parseFloat(inputTempo.value) <= 0) {
+            inputTempo.classList.add('invalido');
+            erroTempo.textContent = 'Tempo deve ser maior que 0.';
+            formValido = false;
+        } else {
+            inputTempo.classList.remove('invalido');
+            erroTempo.textContent = '';
+        }
+
+        btnSalvar.disabled = !formValido;
+    };
+
+    inputData.addEventListener('input', validarInputs);
+    inputDistancia.addEventListener('input', validarInputs);
+    inputTempo.addEventListener('input', validarInputs);
+}
+
+// --- 3. Lógica de Ordenação e Paginação ---
 
 function aplicarOrdenacao() {
     const criterio = filtroSelect.value;
     
-    // Cria cópia do array para ordenar
-    let listaOrdenada = [...todasAsCorridas];
+    // Ordena sobre a cópia global
+    listaFiltrada = [...todasAsCorridas];
 
-    listaOrdenada.sort((a, b) => {
+    listaFiltrada.sort((a, b) => {
         let valorA, valorB;
-
         switch (criterio) {
             case 'distancia':
                 valorA = a.distanciaKm;
@@ -83,7 +171,6 @@ function aplicarOrdenacao() {
                 valorB = b.tempoMinutos;
                 break;
             case 'pace':
-                // Evita divisão por zero
                 valorA = (a.distanciaKm > 0) ? (a.tempoMinutos / a.distanciaKm) : 0;
                 valorB = (b.distanciaKm > 0) ? (b.tempoMinutos / b.distanciaKm) : 0;
                 break;
@@ -93,24 +180,36 @@ function aplicarOrdenacao() {
                 valorB = new Date(b.data).getTime();
                 break;
         }
-
         if (valorA < valorB) return ordemDecrescente ? 1 : -1;
         if (valorA > valorB) return ordemDecrescente ? -1 : 1;
         return 0;
     });
 
-    renderCorridas(listaOrdenada);
+    // Atualiza dashboard com os totais (baseado na lista atual/filtrada se houvesse filtro)
+    atualizarDashboard(listaFiltrada);
+
+    // Resetar para página 1 ao reordenar
+    paginaAtual = 1;
+    renderCorridasPaginadas();
 }
 
-function renderCorridas(corridas) {
+function renderCorridasPaginadas() {
     listaCorridas.innerHTML = ''; 
 
-    if (corridas.length === 0) {
-        listaCorridas.innerHTML = '<p style="text-align:center;">Nenhuma corrida registada ainda.</p>';
+    if (listaFiltrada.length === 0) {
+        listaCorridas.innerHTML = '<p style="text-align:center;">Nenhuma corrida encontrada.</p>';
+        divPaginacao.style.display = 'none';
         return;
     }
 
-    corridas.forEach(corrida => {
+    // Cálculo da fatia (Slice)
+    const inicio = (paginaAtual - 1) * itensPorPagina;
+    const fim = inicio + itensPorPagina;
+    const corridasPagina = listaFiltrada.slice(inicio, fim);
+    const totalPaginas = Math.ceil(listaFiltrada.length / itensPorPagina);
+
+    // Renderiza itens
+    corridasPagina.forEach(corrida => {
         const item = document.createElement('li');
         item.className = 'corrida-item';
         const pace = calcularPace(corrida.distanciaKm, corrida.tempoMinutos);
@@ -131,9 +230,36 @@ function renderCorridas(corridas) {
         `;
         listaCorridas.appendChild(item);
     });
+
+    // Atualiza controles de paginação
+    if (listaFiltrada.length > itensPorPagina) {
+        divPaginacao.style.display = 'flex';
+        infoPagina.textContent = `Pág ${paginaAtual} de ${totalPaginas}`;
+        btnAnt.disabled = paginaAtual === 1;
+        btnProx.disabled = paginaAtual === totalPaginas;
+    } else {
+        divPaginacao.style.display = 'none';
+    }
 }
 
-// --- Lógica da Aplicação (Consumo da API) ---
+// Event Listeners Paginação
+btnAnt.addEventListener('click', () => {
+    if (paginaAtual > 1) {
+        paginaAtual--;
+        renderCorridasPaginadas();
+    }
+});
+
+btnProx.addEventListener('click', () => {
+    const totalPaginas = Math.ceil(listaFiltrada.length / itensPorPagina);
+    if (paginaAtual < totalPaginas) {
+        paginaAtual++;
+        renderCorridasPaginadas();
+    }
+});
+
+// --- API Functions ---
+
 async function fetchCorridas() {
     clearError();
     loadingDiv.style.display = 'block';
@@ -144,9 +270,8 @@ async function fetchCorridas() {
 
         const dados = await response.json();
         
-        // Atualiza estado global e aplica ordenação inicial
         todasAsCorridas = dados;
-        aplicarOrdenacao();
+        aplicarOrdenacao(); // Isso chama renderCorridasPaginadas e atualizarDashboard
 
     } catch (error) {
         showError(error.message);
@@ -158,6 +283,13 @@ async function fetchCorridas() {
 async function handleFormSubmit(event) {
     event.preventDefault(); 
     clearError();
+
+    // Validação extra antes de enviar
+    if (parseFloat(inputDistancia.value) <= 0 || parseFloat(inputTempo.value) <= 0) {
+        alert("Verifique os valores inseridos.");
+        return;
+    }
+
     const corridaData = {
         data: inputData.value,
         distanciaKm: parseFloat(inputDistancia.value),
@@ -188,7 +320,7 @@ async function handleFormSubmit(event) {
         }
 
         resetFormToCreateMode();
-        await fetchCorridas(); // Recarrega e reordena
+        await fetchCorridas(); 
 
     } catch (error) {
         showError(error.message);
@@ -232,6 +364,11 @@ async function handleEditClick(id) {
         btnSalvar.style.backgroundColor = '#FFB800';
         btnCancelar.style.display = 'inline-block';
         
+        // Remove validações antigas ao entrar em modo edição
+        [inputData, inputDistancia, inputTempo].forEach(i => i.classList.remove('invalido'));
+        document.querySelectorAll('.msg-erro').forEach(s => s.textContent = '');
+        btnSalvar.disabled = false;
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
         showError(error.message);
@@ -251,9 +388,9 @@ async function handleListClick(event) {
 filtroSelect.addEventListener('change', aplicarOrdenacao);
 
 btnOrdem.addEventListener('click', () => {
-    ordemDecrescente = !ordemDecrescente; // Inverte estado
+    ordemDecrescente = !ordemDecrescente; 
     btnOrdem.innerText = ordemDecrescente ? "⬇" : "⬆";
-    aplicarOrdenacao(); // Reordena visualmente
+    aplicarOrdenacao(); 
 });
 
 // --- Inicialização ---
@@ -262,6 +399,7 @@ listaCorridas.addEventListener('click', handleListClick);
 btnCancelar.addEventListener('click', resetFormToCreateMode);
 
 document.addEventListener('DOMContentLoaded', () => {
+    setupValidacao(); // Ativa os listeners de validação
     fetchCorridas();
     resetFormToCreateMode();
 });

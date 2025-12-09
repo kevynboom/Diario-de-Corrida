@@ -323,3 +323,84 @@ footer {
     color: #888;
     margin-top: 3rem;
 }
+
+/* --- NOVOS ESTILOS --- */
+
+/* 1. Estilos dos Cartões de Estatística */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.card-stat {
+    background-color: var(--cor-fundo-secundaria);
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid var(--cor-destaque);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+.card-stat h3 {
+    font-size: 1rem;
+    color: var(--cor-texto-secundario);
+    margin-bottom: 10px;
+}
+
+.card-stat p {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--cor-texto-claro);
+}
+
+/* 2. Validação Visual */
+.form-group input.invalido {
+    border-color: var(--cor-vermelho);
+    background-color: rgba(230, 57, 70, 0.1);
+}
+
+.msg-erro {
+    color: var(--cor-vermelho);
+    font-size: 0.8rem;
+    margin-top: 5px;
+    display: block;
+    height: 1.2em; /* Reserva espaço para evitar pulo de layout */
+}
+
+/* 3. Paginação */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 20px 0;
+}
+
+.btn-paginacao {
+    background-color: var(--cor-fundo-secundaria);
+    color: var(--cor-texto-claro);
+    border: 1px solid var(--cor-borda);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-paginacao:hover:not(:disabled) {
+    background-color: var(--cor-destaque);
+    color: var(--cor-fundo-principal);
+    border-color: var(--cor-destaque);
+}
+
+.btn-paginacao:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#info-pagina {
+    font-weight: bold;
+    color: var(--cor-texto-secundario);
+}
