@@ -1,0 +1,11 @@
+# Ficheiros do .NET
+[Oo]bj/
+[Bb]in/
+
+# Ficheiros do SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Ficheiros do VSCode
+.vscode/
