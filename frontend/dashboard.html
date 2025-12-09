@@ -48,7 +48,21 @@
         </form>
 
         <section class="historico-section">
-            <h2>Histórico de Corridas</h2>
+            <div class="header-historico">
+                <h2>Histórico de Corridas</h2>
+                
+                <div class="controles-filtro">
+                    <select id="filtroSelect" class="input-filtro">
+                        <option value="data">Data</option>
+                        <option value="distancia">Distância</option>
+                        <option value="tempo">Tempo</option>
+                        <option value="pace">Pace</option>
+                    </select>
+            
+                    <button id="btnOrdem" class="btn-ordem" title="Alternar Ordem">⬇</button>
+                </div>
+            </div>
+
             <div id="loading">A carregar histórico...</div>
             <div id="error-message"></div>
             <ul id="lista-corridas">

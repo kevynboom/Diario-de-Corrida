@@ -4,6 +4,10 @@ const API_CORRIDAS_URL = 'http://localhost:5184/api/Corridas';
 let editMode = false;
 let editId = null;
 
+// Variáveis para controle de listagem e filtro
+let todasAsCorridas = [];
+let ordemDecrescente = true; // Padrão: Mais recente/maior primeiro
+
 // --- Elementos do DOM ---
 const form = document.getElementById('form-corrida');
 const listaCorridas = document.getElementById('lista-corridas');
@@ -15,6 +19,10 @@ const inputTempo = document.getElementById('tempo');
 const inputLocal = document.getElementById('local');
 const btnSalvar = document.getElementById('btn-salvar');
 const btnCancelar = document.getElementById('btn-cancelar');
+
+// Elementos de Filtro
+const filtroSelect = document.getElementById('filtroSelect');
+const btnOrdem = document.getElementById('btnOrdem');
 
 // --- Funções Auxiliares ---
 function showError(message) {
@@ -54,31 +62,54 @@ function resetFormToCreateMode() {
     btnCancelar.style.display = 'none';
 }
 
-// --- Lógica da Aplicação (Consumo da API) ---
-async function fetchCorridas() {
-    clearError();
-    loadingDiv.style.display = 'block';
-    listaCorridas.innerHTML = ''; 
+// --- Lógica de Ordenação e Renderização ---
 
-    try {
-        const response = await fetch(API_CORRIDAS_URL);
-        if (!response.ok) throw new Error(`Falha na rede: ${response.statusText}`);
+function aplicarOrdenacao() {
+    const criterio = filtroSelect.value;
+    
+    // Cria cópia do array para ordenar
+    let listaOrdenada = [...todasAsCorridas];
 
-        const corridas = await response.json();
-        renderCorridas(corridas);
-    } catch (error) {
-        showError(error.message);
-    } finally {
-        loadingDiv.style.display = 'none';
-    }
+    listaOrdenada.sort((a, b) => {
+        let valorA, valorB;
+
+        switch (criterio) {
+            case 'distancia':
+                valorA = a.distanciaKm;
+                valorB = b.distanciaKm;
+                break;
+            case 'tempo':
+                valorA = a.tempoMinutos;
+                valorB = b.tempoMinutos;
+                break;
+            case 'pace':
+                // Evita divisão por zero
+                valorA = (a.distanciaKm > 0) ? (a.tempoMinutos / a.distanciaKm) : 0;
+                valorB = (b.distanciaKm > 0) ? (b.tempoMinutos / b.distanciaKm) : 0;
+                break;
+            case 'data':
+            default:
+                valorA = new Date(a.data).getTime();
+                valorB = new Date(b.data).getTime();
+                break;
+        }
+
+        if (valorA < valorB) return ordemDecrescente ? 1 : -1;
+        if (valorA > valorB) return ordemDecrescente ? -1 : 1;
+        return 0;
+    });
+
+    renderCorridas(listaOrdenada);
 }
 
 function renderCorridas(corridas) {
+    listaCorridas.innerHTML = ''; 
+
     if (corridas.length === 0) {
         listaCorridas.innerHTML = '<p style="text-align:center;">Nenhuma corrida registada ainda.</p>';
         return;
     }
-    corridas.sort((a, b) => new Date(b.data) - new Date(a.data));
+
     corridas.forEach(corrida => {
         const item = document.createElement('li');
         item.className = 'corrida-item';
@@ -102,6 +133,28 @@ function renderCorridas(corridas) {
     });
 }
 
+// --- Lógica da Aplicação (Consumo da API) ---
+async function fetchCorridas() {
+    clearError();
+    loadingDiv.style.display = 'block';
+    
+    try {
+        const response = await fetch(API_CORRIDAS_URL);
+        if (!response.ok) throw new Error(`Falha na rede: ${response.statusText}`);
+
+        const dados = await response.json();
+        
+        // Atualiza estado global e aplica ordenação inicial
+        todasAsCorridas = dados;
+        aplicarOrdenacao();
+
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        loadingDiv.style.display = 'none';
+    }
+}
+
 async function handleFormSubmit(event) {
     event.preventDefault(); 
     clearError();
@@ -112,40 +165,33 @@ async function handleFormSubmit(event) {
         local: inputLocal.value || null
     };
 
-    if (editMode) {
-        try {
+    try {
+        let response;
+        if (editMode) {
             const corridaAtualizada = { ...corridaData, id: editId }; 
-            const response = await fetch(`${API_CORRIDAS_URL}/${editId}`, {
+            response = await fetch(`${API_CORRIDAS_URL}/${editId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(corridaAtualizada)
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.title || 'Erro ao salvar alterações');
-            }
-            resetFormToCreateMode();
-            await fetchCorridas();
-        } catch (error) {
-            showError(error.message);
-        }
-    } else {
-        // --- Lógica de CRIAÇÃO (CREATE) ---
-        try {
-            const response = await fetch(API_CORRIDAS_URL, {
+        } else {
+            response = await fetch(API_CORRIDAS_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(corridaData)
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.title || errorData || 'Erro ao guardar corrida');
-            }
-            form.reset();
-            await fetchCorridas();
-        } catch (error) {
-            showError(error.message);
         }
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.title || 'Erro ao processar solicitação');
+        }
+
+        resetFormToCreateMode();
+        await fetchCorridas(); // Recarrega e reordena
+
+    } catch (error) {
+        showError(error.message);
     }
 }
 
@@ -173,15 +219,19 @@ async function handleEditClick(id) {
         const corrida = await response.json();
         const dataLocal = new Date(corrida.data);
         const dataParaInput = new Date(dataLocal.getTime() - (dataLocal.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+        
         inputData.value = dataParaInput;
         inputDistancia.value = corrida.distanciaKm;
         inputTempo.value = corrida.tempoMinutos;
         inputLocal.value = corrida.local;
+        
         editMode = true;
         editId = corrida.id;
+        
         btnSalvar.textContent = 'Salvar Alterações';
         btnSalvar.style.backgroundColor = '#FFB800';
         btnCancelar.style.display = 'inline-block';
+        
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
         showError(error.message);
@@ -189,15 +239,22 @@ async function handleEditClick(id) {
 }
 
 async function handleListClick(event) {
+    const id = event.target.dataset.id;
     if (event.target.classList.contains('btn-excluir')) {
-        const id = event.target.dataset.id;
         await handleDeleteClick(id);
-    }
-    if (event.target.classList.contains('btn-editar')) {
-        const id = event.target.dataset.id;
+    } else if (event.target.classList.contains('btn-editar')) {
         await handleEditClick(id);
     }
 }
+
+// --- Event Listeners dos Filtros ---
+filtroSelect.addEventListener('change', aplicarOrdenacao);
+
+btnOrdem.addEventListener('click', () => {
+    ordemDecrescente = !ordemDecrescente; // Inverte estado
+    btnOrdem.innerText = ordemDecrescente ? "⬇" : "⬆";
+    aplicarOrdenacao(); // Reordena visualmente
+});
 
 // --- Inicialização ---
 form.addEventListener('submit', handleFormSubmit);

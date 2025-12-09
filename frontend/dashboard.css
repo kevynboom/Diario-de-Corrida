@@ -184,6 +184,55 @@ input[type=number] {
     margin-top: 3rem;
 }
 
+/* Estilos para o cabeçalho do filtro */
+.header-historico {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--cor-destaque);
+    padding-bottom: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.header-historico h2 {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.controles-filtro {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.input-filtro {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid var(--cor-borda);
+    background-color: var(--cor-fundo-secundaria);
+    color: var(--cor-texto-claro);
+    font-family: var(--fonte-principal);
+    cursor: pointer;
+}
+
+.btn-ordem {
+    background-color: var(--cor-fundo-secundaria);
+    color: var(--cor-destaque);
+    border: 1px solid var(--cor-borda);
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: background 0.3s;
+}
+
+.btn-ordem:hover {
+    background-color: var(--cor-borda);
+}
+
 #lista-corridas {
     list-style: none;
     padding: 0;
