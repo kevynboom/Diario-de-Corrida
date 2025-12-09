@@ -1,17 +1,28 @@
 # Diário de Corrida (Full-Stack .NET + JS)
 
 ## Sobre o Projeto
-Este é um projeto full-stack simplificado que implementa um "Diário de Corrida" digital. A aplicação permite o registo e gestão (CRUD completo) de atividades físicas.
+Este é um projeto full-stack simplificado que implementa um "Diário de Corrida" digital. A aplicação permite o registo e gestão (CRUD completo) de atividades físicas com foco em desempenho e histórico.
 
 O objetivo é demonstrar a integração entre um backend .NET Web API e um frontend em JavaScript (Vanilla) de forma direta, utilizando SQLite como base de dados local.
 
 ## Funcionalidades
-* **Listar Corridas:** Visualização de todo o histórico de corridas com data, local, distância e tempo.
-* **Registar:** Criação de novos registos de corrida.
-* **Editar:** Atualização de dados de corridas existentes.
-* **Excluir:** Remoção de registos.
-* **Cálculo de Pace:** O frontend calcula e exibe automaticamente o ritmo médio (min/km).
+### 📊 Dashboard e Estatísticas
+* **Visão Geral:** Cards com o total de corridas realizadas, distância total acumulada e pace médio geral de todas as atividades.
+* **Cálculo Automático de Pace:** O sistema calcula o ritmo (min/km) automaticamente com base na distância e tempo inseridos.
+
+### 🏃 Gestão de Corridas (CRUD)
+* **Registar:** Criação de novos registos com validação de dados (impedindo datas futuras ou valores negativos).
+* **Listar:** Visualização do histórico completo.
+* **Editar:** Atualização de dados de corridas existentes (modo de edição com destaque visual).
+* **Excluir:** Remoção de registos com confirmação de segurança.
+
+### 🔍 Organização e Navegação
+* **Filtros e Ordenação:** Permite ordenar a lista por **Data**, **Distância**, **Tempo** ou **Pace**, tanto em ordem crescente quanto decrescente.
+* **Paginação:** O histórico é dividido em páginas (10 itens por página) para melhor performance e usabilidade.
+
+### 🎨 Interface (UI/UX)
 * **Design:** Interface moderna em Dark Mode.
+* **Feedback Visual:** Mensagens de carregamento ("loading"), tratamento de erros e validação visual nos campos do formulário (bordas vermelhas para inputs inválidos).
 
 ## Tecnologias Utilizadas
 
@@ -23,8 +34,8 @@ O objetivo é demonstrar a integração entre um backend .NET Web API e um front
 
 **Frontend:**
 * HTML5
-* CSS3 (Flexbox, Grid)
-* JavaScript (ES6+ com fetch API)
+* CSS3 (Flexbox, Grid, CSS Variables)
+* JavaScript (ES6+, Fetch API, Manipulação de DOM)
 
 ---
 
